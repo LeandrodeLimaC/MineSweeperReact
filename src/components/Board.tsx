@@ -6,16 +6,17 @@ type GameBoard = TileState[][]
 
 function Board() {
   const [board, setBoard] = useState<GameBoard>([])
+  const [minesPosition, setMinesPosition] = useState<TileState[]>();
+
   const totalRows = 10
   const totalColumns = 10
 
   useEffect(() => {
-    const newBoard = createNewBoard(totalRows, totalColumns, getInitialTileState)
-
+    const newBoard = createNewBoard(totalRows, totalColumns, createInitialTileState)
     setBoard(newBoard)
   }, [])
 
-  const getInitialTileState = (
+  const createInitialTileState = (
     positionX: number,
     positionY: number
   ): TileState => ({
@@ -29,12 +30,22 @@ function Board() {
   const createNewBoard = (
     totalRows: number,
     totalColumns: number,
-    getStateFn: (positionX: number, positionY: number) => TileState
+    createTileState: (positionX: number, positionY: number) => TileState
   ): GameBoard => {
+    const mines: TileState[] = []
+
     const board = Array(totalRows).fill('').map((_, rowIndex) =>
-      Array(totalColumns).fill('').map((_, columnIndex) => getStateFn(rowIndex, columnIndex))
+      Array(totalColumns).fill('').map((_, columnIndex) => {
+        const tile = createTileState(rowIndex, columnIndex)
+
+        if (tile.hasMine)
+          mines.push(tile)
+
+        return tile
+      })
     )
 
+    setMinesPosition([...mines])
     return board
   }
 
@@ -69,49 +80,65 @@ function Board() {
     return neighbors.reduce((acc, tile) => tile.hasMine ? ++acc : acc, 0)
   }
 
+  const getCurrentTile = (
+    positionX: number,
+    positionY: number
+  ): TileState => {
+    return ({ ...board[positionX][positionY] })
+  }
+
   const floodFill = (
     startPointX: number,
     startPointY: number,
-    board: GameBoard
   ): void => {
+    let currentTile = getCurrentTile(startPointX, startPointY)
+
+    if (currentTile.wasRevealed || currentTile.hasMine)
+      return
+
     const neighbors = getNeighbors(startPointX, startPointY)
     const minesAround = countMinesInNeighbors(neighbors)
 
-    const getCurrentTile = () => board[startPointX][startPointY]
+    revealTile(startPointX, startPointY, minesAround)
 
-    revealTile(startPointX, startPointY, board, minesAround)
+    neighbors.forEach((neighbor) => {
+      if (!neighbor.wasRevealed && !minesAround)
+        floodFill(neighbor.positionX, neighbor.positionY)
+    })
+  }
 
-    if (!getCurrentTile().hasMine) {
-      neighbors.map((neighbor) => {
-        if (!neighbor.wasRevealed && getCurrentTile().minesAround === 0)
-          return floodFill(neighbor.positionX, neighbor.positionY, board)
-
-        return neighbor
-      })
-    }
+  const revealMines = (): void => {
+    minesPosition?.forEach(({ positionX, positionY }) => {
+      revealTile(positionX, positionY)
+    })
   }
 
   const handleTileClick = (
     positionX: number,
     positionY: number,
   ): void => {
-    floodFill(positionX, positionY, [...board])
+    const currentTile = getCurrentTile(positionX, positionY)
+
+    if (currentTile.hasMine)
+      return revealMines()
+
+    floodFill(positionX, positionY)
   }
 
   const revealTile = (
     positionX: number,
     positionY: number,
-    board: GameBoard,
-    minesAround: number = 0
+    minesAround: number = 0,
+    boardCopy: GameBoard = [...board]
   ): void => {
-    const newTileState = {
-      ...board[positionX][positionY],
+    const newTileState: TileState = {
+      ...boardCopy[positionX][positionY],
       wasRevealed: true,
       minesAround
     }
 
-    board[positionX][positionY] = newTileState
-    setBoard([...board])
+    boardCopy[positionX][positionY] = newTileState
+    setBoard([...boardCopy])
   }
 
 
@@ -119,8 +146,8 @@ function Board() {
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "repeat(10, 40px)",
-        gridTemplateRows: "repeat(10, 40px)",
+        gridTemplateColumns: `repeat(${totalColumns}, 40px)`,
+        gridTemplateRows: `repeat(${totalRows}, 40px)`,
         gap: "1px"
       }}
     >

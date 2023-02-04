@@ -25,12 +25,12 @@ function Tile({
     <div
       onClick={handleOnClick}
       style={{
-        background: wasRevealed ? 'purple' : 'black',
+        background: wasRevealed ? 'dodgerblue' : 'black',
         height: '40px',
         color: 'white'
       }}
     >
-      {wasRevealed && (hasMine ? 'M' : minesAround)}
+      {wasRevealed && (hasMine ? 'M' : (!!minesAround ? minesAround : ''))}
     </div>
   )
 }
