@@ -1,30 +1,68 @@
 import React, { useEffect, useState } from "react"
+import { GameState, MineProbability } from "../App"
 import { Tile, TileProps } from "./Tile"
 
-type TileState = Omit<TileProps, 'onClick'>
+type TileState = Omit<TileProps, 'onLeftClick' | 'onRightClick'>
 type GameBoard = TileState[][]
 
-function Board() {
-  const [board, setBoard] = useState<GameBoard>([])
-  const [minesPosition, setMinesPosition] = useState<TileState[]>();
+type BoardProps = {
+  totalRows: number,
+  totalColumns: number,
+  gameState: GameState,
+  onGameOver: () => void,
+  mineProbability: MineProbability
+}
 
-  const totalRows = 10
-  const totalColumns = 10
+function Board({
+  gameState,
+  totalColumns,
+  totalRows,
+  onGameOver,
+  mineProbability
+}: BoardProps) {
+  const [board, setBoard] = useState<GameBoard>([])
+  const [minesPosition, setMinesPosition] = useState<Pick<TileState, 'positionX' | 'positionY'>[]>();
+  const [flagsRemaining, setFlagsRemaining] = useState<number>(0)
+
+  useEffect(() => {
+    setFlagsRemaining(minesPosition?.length ?? 0)
+  }, [minesPosition])
+
+  useEffect(() => {
+    if (!minesPosition?.length) return
+
+    if (!flagsRemaining) {
+      const playerWon = board.every((row) => {
+        return row.every((tile) => {
+          if (tile.hasMine) {
+            return tile.isFlagged
+          }
+
+          return tile.wasRevealed
+        })
+      })
+
+      if (playerWon) {
+        alert("winner")
+      }
+    }
+  }, [board, flagsRemaining, minesPosition])
 
   useEffect(() => {
     const newBoard = createNewBoard(totalRows, totalColumns, createInitialTileState)
     setBoard(newBoard)
-  }, [])
+  }, [totalRows, totalColumns])
 
   const createInitialTileState = (
     positionX: number,
     positionY: number
   ): TileState => ({
     wasRevealed: false,
-    hasMine: Math.random() * 10 > 8,
+    hasMine: Math.random() * mineProbability.base > mineProbability.outcomes,
     minesAround: 0,
     positionX,
-    positionY
+    positionY,
+    isFlagged: false
   })
 
   const createNewBoard = (
@@ -32,14 +70,17 @@ function Board() {
     totalColumns: number,
     createTileState: (positionX: number, positionY: number) => TileState
   ): GameBoard => {
-    const mines: TileState[] = []
+    const mines: Pick<TileState, 'positionX' | 'positionY'>[] = []
 
     const board = Array(totalRows).fill('').map((_, rowIndex) =>
       Array(totalColumns).fill('').map((_, columnIndex) => {
         const tile = createTileState(rowIndex, columnIndex)
 
         if (tile.hasMine)
-          mines.push(tile)
+          mines.push({
+            positionX: tile.positionX,
+            positionY: tile.positionY
+          })
 
         return tile
       })
@@ -93,8 +134,11 @@ function Board() {
   ): void => {
     let currentTile = getCurrentTile(startPointX, startPointY)
 
-    if (currentTile.wasRevealed || currentTile.hasMine)
-      return
+    if (
+      currentTile.wasRevealed ||
+      currentTile.hasMine ||
+      currentTile.isFlagged
+    ) return
 
     const neighbors = getNeighbors(startPointX, startPointY)
     const minesAround = countMinesInNeighbors(neighbors)
@@ -113,16 +157,57 @@ function Board() {
     })
   }
 
-  const handleTileClick = (
+  const handleTileLeftClick = (
+    positionX: number,
+    positionY: number,
+  ): void => {
+    if (gameState === 'game-over') return
+
+    const currentTile = getCurrentTile(positionX, positionY)
+
+    if (currentTile.isFlagged)
+      return
+
+    if (!currentTile.hasMine)
+      return floodFill(positionX, positionY)
+
+    onGameOver()
+    revealMines()
+  }
+
+  const handleTileRightClick = (
     positionX: number,
     positionY: number,
   ): void => {
     const currentTile = getCurrentTile(positionX, positionY)
 
-    if (currentTile.hasMine)
-      return revealMines()
+    if (
+      gameState === 'game-over' ||
+      currentTile.wasRevealed
+    )
+      return
 
-    floodFill(positionX, positionY)
+    toggleFlagOnTile(currentTile)
+  }
+
+  const toggleFlagOnTile = (
+    tile: TileState,
+    boardCopy: GameBoard = [...board]
+  ): void => {
+
+    if (tile.isFlagged) {
+      setFlagsRemaining(current => current + 1)
+    } else {
+      setFlagsRemaining(current => current - 1)
+    }
+
+    const newTileState: TileState = {
+      ...tile,
+      isFlagged: !tile.isFlagged
+    }
+
+    boardCopy[tile.positionX][tile.positionY] = newTileState
+    setBoard([...boardCopy])
   }
 
   const revealTile = (
@@ -143,29 +228,41 @@ function Board() {
 
 
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: `repeat(${totalColumns}, 40px)`,
-        gridTemplateRows: `repeat(${totalRows}, 40px)`,
-        gap: "1px"
-      }}
-    >
-      {board.map((row) =>
-        row.map(
-          ({ wasRevealed, hasMine, minesAround, positionX, positionY }) => (
-            <Tile
-              positionX={positionX}
-              positionY={positionY}
-              key={`${positionX}${positionY}`}
-              onClick={handleTileClick}
-              wasRevealed={wasRevealed}
-              hasMine={hasMine}
-              minesAround={minesAround}
-            />
+    <div>
+      {flagsRemaining}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: `repeat(${totalColumns}, 40px)`,
+          gridTemplateRows: `repeat(${totalRows}, 40px)`,
+          gap: "2px"
+        }}
+      >
+        {board.map((row) =>
+          row.map(
+            ({
+              wasRevealed,
+              hasMine,
+              minesAround,
+              positionX,
+              positionY,
+              isFlagged
+            }) => (
+              <Tile
+                positionX={positionX}
+                positionY={positionY}
+                key={`${positionX}${positionY}`}
+                onLeftClick={handleTileLeftClick}
+                onRightClick={handleTileRightClick}
+                wasRevealed={wasRevealed}
+                hasMine={hasMine}
+                isFlagged={isFlagged}
+                minesAround={minesAround}
+              />
+            )
           )
-        )
-      )}
+        )}
+      </div>
     </div>
   )
 }
