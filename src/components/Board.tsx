@@ -9,41 +9,39 @@ type BoardProps = {
   totalRows: number,
   totalColumns: number,
   gameState: GameState,
-  onGameOver: () => void,
   mineProbability: MineProbability
+  onGameOver: () => void,
+  onPlayerWon: () => void,
+  onPlayerStartPlaying: () => void,
 }
 
 function Board({
   gameState,
   totalColumns,
   totalRows,
+  mineProbability,
   onGameOver,
-  mineProbability
+  onPlayerWon,
+  onPlayerStartPlaying
 }: BoardProps) {
   const [board, setBoard] = useState<GameBoard>([])
-  const [minesPosition, setMinesPosition] = useState<Pick<TileState, 'positionX' | 'positionY'>[]>();
+  const [minesPosition, setMinesPosition] = useState<Pick<TileState, 'positionX' | 'positionY'>[]>([]);
   const [flagsRemaining, setFlagsRemaining] = useState<number>(0)
 
   useEffect(() => {
-    setFlagsRemaining(minesPosition?.length ?? 0)
+    setFlagsRemaining(minesPosition.length ?? 0)
   }, [minesPosition])
 
   useEffect(() => {
-    if (!minesPosition?.length) return
-
-    if (!flagsRemaining) {
-      const playerWon = board.every((row) => {
-        return row.every((tile) => {
-          if (tile.hasMine) {
-            return tile.isFlagged
-          }
-
-          return tile.wasRevealed
-        })
-      })
+    if (!flagsRemaining && minesPosition.length) {
+      const playerWon = board.every((row) =>
+        row.every((tile) =>
+          tile.hasMine ? tile.isFlagged : tile.wasRevealed
+        )
+      )
 
       if (playerWon) {
-        alert("winner")
+        onPlayerWon()
       }
     }
   }, [board, flagsRemaining, minesPosition])
@@ -157,11 +155,25 @@ function Board({
     })
   }
 
+  const playerCanMakeAnAction = () => {
+    switch (gameState) {
+      case 'waiting':
+        onPlayerStartPlaying()
+        return true
+
+      case 'game-over':
+        return false
+
+      default:
+        return true
+    }
+  }
+
   const handleTileLeftClick = (
     positionX: number,
     positionY: number,
   ): void => {
-    if (gameState === 'game-over') return
+    if (!playerCanMakeAnAction()) return
 
     const currentTile = getCurrentTile(positionX, positionY)
 
@@ -179,13 +191,11 @@ function Board({
     positionX: number,
     positionY: number,
   ): void => {
+    if (!playerCanMakeAnAction()) return
+
     const currentTile = getCurrentTile(positionX, positionY)
 
-    if (
-      gameState === 'game-over' ||
-      currentTile.wasRevealed
-    )
-      return
+    if (currentTile.wasRevealed) return
 
     toggleFlagOnTile(currentTile)
   }

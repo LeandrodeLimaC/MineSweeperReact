@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Board } from "./components/Board";
 
-export type GameState = 'playing' | 'game-over' | 'finished'
+export type GameState = 'waiting' | 'playing' | 'player-won' | 'game-over'
 export type MineProbability = {
   base: number,
   outcomes: number
@@ -24,8 +24,8 @@ const levels: Levels = {
   easy: {
     description: "Bem facil, feito pra bebes",
     config: {
-      totalColumns: 2,
-      totalRows: 2,
+      totalColumns: 10,
+      totalRows: 10,
       mineProbability: {
         base: 10,
         outcomes: 8
@@ -46,40 +46,54 @@ const levels: Levels = {
 }
 
 function App() {
-  const [gameState, setGameState] = useState<GameState>('playing')
+  const [gameState, setGameState] = useState<GameState>('waiting')
   const [gameLevel, setGameLevel] = useState<keyof Levels>('easy')
 
   useEffect(() => {
-    setGameState('playing')
+    setGameState('waiting')
   }, [gameLevel])
+
+  const handleOnPlayerStartPlaying = () => {
+    setGameState('playing')
+  }
 
   const handleOnGameOver = () => {
     setGameState('game-over')
   }
 
+  const handlePlayerWon = () => {
+    setGameState('player-won')
+  }
+
   const handleLevelSelect = (level: keyof Levels) => {
-    console.log(level)
     setGameLevel(level)
   }
 
   return (
     <>
-      {
-        Object.keys(levels).map((level) => (
-          <button
-            key={level}
-            onClick={() => handleLevelSelect(level as keyof Levels)}
-          >
-            {level}
-          </button>
-        ))
-      }
+      <div>
+        {
+          Object.keys(levels).map((level) => (
+            <button
+              disabled={gameState === 'playing'}
+              key={level}
+              onClick={() => handleLevelSelect(level as keyof Levels)}
+            >
+              {level}
+            </button>
+          ))
+        }
+      </ div>
+
+      {gameState}
 
       {
         gameLevel && (
           <Board
             gameState={gameState}
             onGameOver={handleOnGameOver}
+            onPlayerWon={handlePlayerWon}
+            onPlayerStartPlaying={handleOnPlayerStartPlaying}
             {...levels[gameLevel].config}
           />
         )
