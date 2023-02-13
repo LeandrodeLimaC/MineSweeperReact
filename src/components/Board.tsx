@@ -119,7 +119,7 @@ function Board({
     return neighbors.reduce((acc, tile) => tile.hasMine ? ++acc : acc, 0)
   }
 
-  const getCurrentTile = (
+  const getTileByPosition = (
     positionX: number,
     positionY: number
   ): TileState => {
@@ -130,7 +130,7 @@ function Board({
     startPointX: number,
     startPointY: number,
   ): void => {
-    let currentTile = getCurrentTile(startPointX, startPointY)
+    let currentTile = getTileByPosition(startPointX, startPointY)
 
     if (
       currentTile.wasRevealed ||
@@ -149,9 +149,27 @@ function Board({
     })
   }
 
-  const revealMines = (): void => {
+  const revealIncorrectFlags = () => {
+    const boardCopy = [...board]
+
+    for (let row = 0; row < totalRows; row++) {
+      for (let col = 0; col < totalColumns; col++) {
+        if (boardCopy[row][col].isFlagged && !boardCopy[row][col].hasMine) {
+          boardCopy[row][col].wasRevealed = true
+        }
+      }
+    }
+
+    setBoard([...boardCopy])
+  }
+
+  const detonateMines = (): void => {
     minesPosition?.forEach(({ positionX, positionY }) => {
-      revealTile(positionX, positionY)
+      let currentTile = getTileByPosition(positionX, positionY)
+
+      if (!currentTile.isFlagged) {
+        revealTile(positionX, positionY)
+      }
     })
   }
 
@@ -175,7 +193,7 @@ function Board({
   ): void => {
     if (!playerCanMakeAnAction()) return
 
-    const currentTile = getCurrentTile(positionX, positionY)
+    const currentTile = getTileByPosition(positionX, positionY)
 
     if (currentTile.isFlagged)
       return
@@ -184,7 +202,8 @@ function Board({
       return floodFill(positionX, positionY)
 
     onGameOver()
-    revealMines()
+    detonateMines()
+    revealIncorrectFlags()
   }
 
   const handleTileRightClick = (
@@ -193,7 +212,7 @@ function Board({
   ): void => {
     if (!playerCanMakeAnAction()) return
 
-    const currentTile = getCurrentTile(positionX, positionY)
+    const currentTile = getTileByPosition(positionX, positionY)
 
     if (currentTile.wasRevealed) return
 

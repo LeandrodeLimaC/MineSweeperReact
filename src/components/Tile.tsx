@@ -30,6 +30,7 @@ function Tile({
     onRightClick(positionX, positionY)
   }
 
+  const flaggedIncorrectly = !hasMine && isFlagged
   return (
     <div
       style={{
@@ -38,13 +39,13 @@ function Tile({
         justifyContent: 'center',
         color: 'white',
         fontSize: '2rem',
-        background: wasRevealed ? 'dodgerblue' : 'black',
+        background: wasRevealed ? (flaggedIncorrectly ? 'red' : 'dodgerblue') : 'black',
       }}
       onClick={handleOnLeftClick}
       onContextMenu={handleOnRightClick}
     >
       {
-        wasRevealed ? (
+        wasRevealed && !flaggedIncorrectly ? (
           hasMine ?
             'M' :
             (!!minesAround && minesAround)
