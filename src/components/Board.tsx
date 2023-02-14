@@ -154,8 +154,11 @@ function Board({
 
     for (let row = 0; row < totalRows; row++) {
       for (let col = 0; col < totalColumns; col++) {
-        if (boardCopy[row][col].isFlagged && !boardCopy[row][col].hasMine) {
-          boardCopy[row][col].wasRevealed = true
+        const currentTile = boardCopy[row][col]
+        const isIncorrectlyFlagged = currentTile.isFlagged && !currentTile.hasMine
+
+        if (isIncorrectlyFlagged) {
+          currentTile.wasRevealed = true
         }
       }
     }
