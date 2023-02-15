@@ -40,9 +40,7 @@ function Board({
         )
       )
 
-      if (playerWon) {
-        onPlayerWon()
-      }
+      if (playerWon) onPlayerWon()
     }
   }, [board, flagsRemaining, minesPosition])
 
@@ -50,6 +48,13 @@ function Board({
     const newBoard = createNewBoard(totalRows, totalColumns, createInitialTileState)
     setBoard(newBoard)
   }, [totalRows, totalColumns])
+
+  useEffect(() => {
+    if (gameState === "game-over") {
+      detonateMines()
+      revealIncorrectFlags()
+    }
+  }, [gameState])
 
   const createInitialTileState = (
     positionX: number,
@@ -100,13 +105,15 @@ function Board({
       for (let offSetY = -1; offSetY <= 1; offSetY++) {
         let currentY = positionY + offSetY
 
+        const isCurrentTile = currentX === positionX && currentY === positionY
+
         const isInsideBoundaries =
           currentX > -1 &&
           currentY > -1 &&
           currentX < totalRows &&
           currentY < totalColumns
 
-        if (isInsideBoundaries) {
+        if (isInsideBoundaries && !isCurrentTile) {
           neighbors.push(board[currentX][currentY])
         }
       }
@@ -132,16 +139,18 @@ function Board({
   ): void => {
     let currentTile = getTileByPosition(startPointX, startPointY)
 
+    if (currentTile.isFlagged) return
+
+    revealTile(startPointX, startPointY)
+
     if (
       currentTile.wasRevealed ||
-      currentTile.hasMine ||
-      currentTile.isFlagged
+      currentTile.hasMine
     ) return
 
     const neighbors = getNeighbors(startPointX, startPointY)
     const minesAround = countMinesInNeighbors(neighbors)
 
-    revealTile(startPointX, startPointY, minesAround)
 
     neighbors.forEach((neighbor) => {
       if (!neighbor.wasRevealed && !minesAround)
@@ -198,15 +207,33 @@ function Board({
 
     const currentTile = getTileByPosition(positionX, positionY)
 
-    if (currentTile.isFlagged)
+    if (currentTile.isFlagged) return
+
+    if (currentTile.wasRevealed) {
+      const neighbors = getNeighbors(positionX, positionY)
+
+      const flags = neighbors.reduce((acc, curr) => {
+        if (curr.isFlagged) ++acc
+
+        return acc
+      }, 0)
+
+      if (flags === currentTile.minesAround) {
+        // reveal neighbors which aren't flagged mines
+        neighbors.forEach((neighbor) => {
+          if (!neighbor.minesAround) {
+            floodFill(neighbor.positionX, neighbor.positionY)
+            return
+          }
+          if (!neighbor.isFlagged) {
+            revealTile(neighbor.positionX, neighbor.positionY)
+          }
+        })
+      }
       return
+    }
 
-    if (!currentTile.hasMine)
-      return floodFill(positionX, positionY)
-
-    onGameOver()
-    detonateMines()
-    revealIncorrectFlags()
+    floodFill(positionX, positionY)
   }
 
   const handleTileRightClick = (
@@ -245,9 +272,10 @@ function Board({
   const revealTile = (
     positionX: number,
     positionY: number,
-    minesAround: number = 0,
     boardCopy: GameBoard = [...board]
   ): void => {
+    const minesAround = countMinesInNeighbors(getNeighbors(positionX, positionY))
+
     const newTileState: TileState = {
       ...boardCopy[positionX][positionY],
       wasRevealed: true,
@@ -256,8 +284,9 @@ function Board({
 
     boardCopy[positionX][positionY] = newTileState
     setBoard([...boardCopy])
-  }
 
+    if (newTileState.hasMine && gameState !== "game-over") onGameOver()
+  }
 
   return (
     <div>

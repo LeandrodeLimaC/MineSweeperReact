@@ -28,7 +28,7 @@ const levels: Levels = {
       totalRows: 10,
       mineProbability: {
         base: 10,
-        outcomes: 8
+        outcomes: 9
       }
     }
   },
