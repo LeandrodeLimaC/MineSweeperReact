@@ -1,19 +1,17 @@
 import React from "react"
 
 type TileProps = {
-  positionX: number,
-  positionY: number,
+  coordinates: Coordinates2D
   wasRevealed: boolean,
   hasMine: boolean,
   minesAround: number
   isFlagged: boolean,
-  onLeftClick: (positionX: number, positionY: number) => void,
-  onRightClick: (positionX: number, positionY: number) => void,
+  onLeftClick: (coordinates: Coordinates2D) => void,
+  onRightClick: (coordinates: Coordinates2D) => void,
 }
 
 function Tile({
-  positionX,
-  positionY,
+  coordinates,
   onLeftClick,
   onRightClick,
   minesAround,
@@ -22,15 +20,22 @@ function Tile({
   isFlagged
 }: TileProps) {
   const handleOnLeftClick = () => {
-    onLeftClick(positionX, positionY)
+    onLeftClick({
+      x: coordinates.x,
+      y: coordinates.y
+    })
   }
 
   const handleOnRightClick = (ev: React.MouseEvent) => {
     ev.preventDefault()
-    onRightClick(positionX, positionY)
+    onRightClick({
+      x: coordinates.x,
+      y: coordinates.y
+    })
   }
 
   const flaggedIncorrectly = !hasMine && isFlagged
+
   return (
     <div
       style={{
@@ -57,4 +62,5 @@ function Tile({
   )
 }
 
-export { Tile, TileProps }
+export { Tile }
+export type { TileProps }

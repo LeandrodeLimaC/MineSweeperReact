@@ -28,18 +28,18 @@ const levels: Levels = {
       totalRows: 10,
       mineProbability: {
         base: 10,
-        outcomes: 9
+        outcomes: 8.5
       }
     }
   },
   medium: {
     description: "Bem facil, feito pra bebes",
     config: {
-      totalColumns: 20,
-      totalRows: 20,
+      totalColumns: 12,
+      totalRows: 12,
       mineProbability: {
-        base: 7,
-        outcomes: 5
+        base: 8.5,
+        outcomes: 6
       }
     }
   },
