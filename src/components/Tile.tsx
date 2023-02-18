@@ -20,18 +20,12 @@ function Tile({
   isFlagged
 }: TileProps) {
   const handleOnLeftClick = () => {
-    onLeftClick({
-      x: coordinates.x,
-      y: coordinates.y
-    })
+    onLeftClick({ ...coordinates })
   }
 
   const handleOnRightClick = (ev: React.MouseEvent) => {
     ev.preventDefault()
-    onRightClick({
-      x: coordinates.x,
-      y: coordinates.y
-    })
+    onRightClick({ ...coordinates })
   }
 
   const flaggedIncorrectly = !hasMine && isFlagged
