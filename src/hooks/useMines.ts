@@ -53,7 +53,7 @@ function useMines({ board, minesCount }: UseMinesProps) {
     [board, minesCount, positions]
   );
 
-  return [positions, setPositions, handlers] as const;
+  return [positions, handlers] as const;
 }
 
 export { useMines };

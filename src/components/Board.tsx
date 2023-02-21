@@ -1,10 +1,13 @@
-import React, { useEffect, useState } from "react"
+import React, { useEffect } from "react"
 
 import { GameState } from "../App"
 import { Tile } from "./Tile"
 
 import { useBoard } from "src/hooks/useBoard"
 import { useMines } from "src/hooks/useMines"
+import { useFlags } from "src/hooks/useFlags"
+
+import { useManagePlayerWon } from "src/hooks/useManagePlayerWon"
 
 type BoardProps = {
   totalRows: number,
@@ -13,7 +16,7 @@ type BoardProps = {
   minesCount: number
   onGameOver: () => void,
   onPlayerWon: () => void,
-  onPlayerFirstAction: () => void,
+  onPlayerFirstMove: () => void,
 }
 
 function Board({
@@ -23,25 +26,19 @@ function Board({
   minesCount,
   onGameOver,
   onPlayerWon,
-  onPlayerFirstAction
+  onPlayerFirstMove
 }: BoardProps) {
   const [board, setBoard] = useBoard({ rows: totalRows, cols: totalColumns })
-  const [minesPosition, setMinesPosition, { handleDetonateMines, handleSetMines }] = useMines({ board, minesCount })
-  const [flagsRemaining, setFlagsRemaining] = useState<number>(minesCount)
+  const [minesPosition, { handleDetonateMines, handleSetMines }] = useMines({ board, minesCount })
+  const [flagsAvailable, setFlagsAvailable] = useFlags({ minesCount })
+  const canPlayerMakeAMove = gameState !== 'game-over'
 
-  useEffect(() => {
-    setFlagsRemaining(minesCount)
-  }, [minesCount])
-
-  useEffect(() => {
-    if (!flagsRemaining && minesPosition.length) {
-      const playerWon = board.every((row) =>
-        row.every((tile) => tile.hasMine ? tile.isFlagged : tile.wasRevealed)
-      )
-
-      if (playerWon) onPlayerWon()
-    }
-  }, [board, flagsRemaining, minesPosition])
+  useManagePlayerWon({
+    board,
+    noMoreFlagsAvailable: !flagsAvailable,
+    hasMines: !!minesPosition.length,
+    callback: onPlayerWon
+  })
 
   useEffect(() => {
     if (gameState === "game-over") {
@@ -55,11 +52,10 @@ function Board({
     setBoard(boardWithMines)
   }
 
-  const getNeighbors = ({
-    x,
-    y
-  }: Coordinates2D): Tile[] => {
-    let neighbors: Tile[] = []
+  const getNeighbors = (
+    { x, y }: Coordinates2D
+  ) => {
+    const neighbors = []
 
     for (let offSetX = -1; offSetX <= 1; offSetX++) {
       let currentX = x + offSetX
@@ -84,25 +80,19 @@ function Board({
     return neighbors
   }
 
-  const countMinesInNeighbors = (neighbors: Tile[]): number => {
-    return neighbors.reduce((acc, tile) => tile.hasMine ? ++acc : acc, 0)
-  }
+  const countInNeighbors = (
+    key: 'hasMine' | 'isFlagged',
+    neighbors: Tile[]
+  ) =>
+    neighbors.reduce((acc, tile) => tile[key] ? ++acc : acc, 0)
 
-  const getTileByPosition = ({
-    x,
-    y
-  }: Coordinates2D): Tile => {
-    return ({ ...board[x][y] })
-  }
+  const floodFill = (
+    { x, y }: Coordinates2D
+  ) => {
+    let currentTile = board[x][y]
 
-  const floodFill = ({
-    x,
-    y
-  }: Coordinates2D): void => {
-    // TODO - ADICIONAR INVERSãoo de dependencia pra ficar chique 8)
-    let currentTile = getTileByPosition({ x, y })
-
-    if (currentTile.isFlagged) return
+    if (currentTile.isFlagged)
+      return
 
     revealTile({ x, y })
 
@@ -112,20 +102,15 @@ function Board({
     ) return
 
     const neighbors = getNeighbors({ x, y })
-    const minesAround = countMinesInNeighbors(neighbors)
+    const minesAround = countInNeighbors('hasMine', neighbors)
 
     neighbors.forEach((neighbor) => {
       if (!neighbor.wasRevealed && !minesAround)
-        floodFill({
-          x: neighbor.coordinates.x,
-          y: neighbor.coordinates.y
-        })
+        floodFill(neighbor.coordinates)
     })
   }
 
-  const revealIncorrectFlags = () => {
-    const boardCopy = [...board]
-
+  const revealIncorrectFlags = (boardCopy: Board = [...board]) => {
     for (let row = 0; row < totalRows; row++) {
       for (let col = 0; col < totalColumns; col++) {
         const currentTile = boardCopy[row][col]
@@ -140,63 +125,43 @@ function Board({
     setBoard([...boardCopy])
   }
 
-  const playerCanMakeAnAction = () => {
-    switch (gameState) {
-      case 'waiting':
-        onPlayerFirstAction()
-        return true
+  const handlePlayerFirstMove = (coordinates: Coordinates2D) => {
+    onSetMines(coordinates)
+    onPlayerFirstMove()
+  }
 
-      case 'game-over':
-        return false
+  const withMoveCheck = (
+    coordinates: Coordinates2D,
+    callback: (coordinates: Coordinates2D) => void
+  ) => {
+    if (canPlayerMakeAMove) {
+      if (gameState === "waiting") handlePlayerFirstMove(coordinates)
 
-      default:
-        return true
+      callback(coordinates)
     }
   }
 
-  const handleTileLeftClick = async ({
+  const revealUnflaggedNeighbors = (tile: Tile) => {
+    const neighbors = getNeighbors(tile.coordinates)
+    const flagsInNeighbors = countInNeighbors('isFlagged', neighbors)
+
+    if (flagsInNeighbors === tile.minesAround) {
+      neighbors.forEach((neighbor) => {
+        if (!neighbor.isFlagged)
+          floodFill(neighbor.coordinates)
+      })
+    }
+  }
+
+  const handleTileLeftClick = ({
     x,
     y
-  }: Coordinates2D): Promise<void> => {
-    if (gameState === "waiting") {
-      onSetMines({ x, y })
-    }
+  }: Coordinates2D) => {
+    if (board[x][y].isFlagged)
+      return
 
-    if (!playerCanMakeAnAction()) return
-
-    const currentTile = getTileByPosition({ x, y })
-
-    if (currentTile.isFlagged) return
-
-    if (currentTile.wasRevealed) {
-      const neighbors = getNeighbors({ x, y })
-
-      const flags = neighbors.reduce((acc, curr) => {
-        if (curr.isFlagged) ++acc
-
-        return acc
-      }, 0)
-
-      if (flags === currentTile.minesAround) {
-        neighbors.forEach((neighbor) => {
-          if (!neighbor.minesAround) {
-            floodFill({
-              x: neighbor.coordinates.x,
-              y: neighbor.coordinates.y
-            })
-            return
-          }
-
-          if (!neighbor.isFlagged) {
-            revealTile({
-              x: neighbor.coordinates.x,
-              y: neighbor.coordinates.y
-            })
-            return
-          }
-        })
-      }
-
+    if (board[x][y].wasRevealed) {
+      revealUnflaggedNeighbors(board[x][y])
       return
     }
 
@@ -207,58 +172,51 @@ function Board({
     x,
     y
   }: Coordinates2D): void => {
-    if (!playerCanMakeAnAction()) return
-
-    const currentTile = getTileByPosition({ x, y })
-
-    if (currentTile.wasRevealed) return
-
-    toggleFlagOnTile(currentTile)
+    if (!board[x][y].wasRevealed) {
+      toggleFlagOnTile({ x, y })
+    }
   }
 
   const toggleFlagOnTile = (
-    tile: Tile,
+    { x, y }: Coordinates2D,
     boardCopy: Board = [...board]
-  ): void => {
-
-    if (tile.isFlagged) {
-      setFlagsRemaining(current => current + 1)
-    } else {
-      setFlagsRemaining(current => current - 1)
+  ) => {
+    boardCopy[x][y] = {
+      ...boardCopy[x][y],
+      isFlagged: !boardCopy[x][y].isFlagged
     }
 
-    const newTileState: Tile = {
-      ...tile,
-      isFlagged: !tile.isFlagged
-    }
-
-    boardCopy[tile.coordinates.x][tile.coordinates.y] = newTileState
+    setFlagsAvailable(current => boardCopy[x][y].isFlagged ? --current : ++current)
     setBoard([...boardCopy])
   }
 
-  const revealTile = ({
-    x,
-    y
-  }: Coordinates2D,
-    boardCopy: Board = [...board]
-  ): void => {
-    const minesAround = countMinesInNeighbors(getNeighbors({ x, y }))
+  const handleMineRevealed = () => {
+    if (gameState !== "game-over") {
+      onGameOver()
+    }
+  }
 
-    const newTileState: Tile = {
+  const revealTile = (
+    { x, y }: Coordinates2D,
+    boardCopy: Board = [...board]
+  ) => {
+    const neighbors = getNeighbors({ x, y })
+    const minesAround = countInNeighbors('hasMine', neighbors)
+
+    boardCopy[x][y] = {
       ...boardCopy[x][y],
       wasRevealed: true,
       minesAround
     }
 
-    boardCopy[x][y] = newTileState
     setBoard([...boardCopy])
 
-    if (newTileState.hasMine && gameState !== "game-over") onGameOver()
+    if (boardCopy[x][y].hasMine) handleMineRevealed()
   }
 
   return (
     <div>
-      {flagsRemaining}
+      {flagsAvailable}
       <div
         style={{
           display: "grid",
@@ -279,8 +237,8 @@ function Board({
               <Tile
                 coordinates={coordinates}
                 key={`${coordinates.x}${coordinates.y}`}
-                onLeftClick={handleTileLeftClick}
-                onRightClick={handleTileRightClick}
+                onLeftClick={(coordinates) => withMoveCheck(coordinates, handleTileLeftClick)}
+                onRightClick={(coordinates) => withMoveCheck(coordinates, handleTileRightClick)}
                 wasRevealed={wasRevealed}
                 hasMine={hasMine}
                 isFlagged={isFlagged}

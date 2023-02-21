@@ -51,7 +51,7 @@ function App() {
     setGameState('waiting')
   }, [gameLevel])
 
-  const handleOnPlayerFirstAction = () => {
+  const handlePlayerFirstMove = () => {
     setGameState('playing')
   }
 
@@ -91,7 +91,7 @@ function App() {
             gameState={gameState}
             onGameOver={handleOnGameOver}
             onPlayerWon={handlePlayerWon}
-            onPlayerFirstAction={handleOnPlayerFirstAction}
+            onPlayerFirstMove={handlePlayerFirstMove}
             {...levels[gameLevel].config}
           />
         )
