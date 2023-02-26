@@ -31,6 +31,7 @@ function Board({
   const [board, setBoard] = useBoard({ rows: totalRows, cols: totalColumns })
   const [minesPosition, { handleDetonateMines, handleSetMines }] = useMines({ board, minesCount })
   const [flagsAvailable, setFlagsAvailable] = useFlags({ minesCount })
+
   const canPlayerMakeAMove = gameState !== 'game-over'
 
   useManagePlayerWon({
@@ -83,8 +84,9 @@ function Board({
   const countInNeighbors = (
     key: 'hasMine' | 'isFlagged',
     neighbors: Tile[]
-  ) =>
-    neighbors.reduce((acc, tile) => tile[key] ? ++acc : acc, 0)
+  ) => {
+    return neighbors.reduce((acc, tile) => tile[key] ? ++acc : acc, 0)
+  }
 
   const floodFill = (
     { x, y }: Coordinates2D

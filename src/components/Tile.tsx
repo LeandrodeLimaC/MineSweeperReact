@@ -24,7 +24,7 @@ function Tile({
   }
 
   return (
-    <div
+    <button
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -45,7 +45,7 @@ function Tile({
           isFlagged && 'F'
         )
       }
-    </div>
+    </button>
   )
 }
 

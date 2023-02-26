@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Board } from "./components/Board";
 
-export type GameState = 'waiting' | 'playing' | 'player-won' | 'game-over'
+export type GameState = 'restarting' | 'waiting' | 'playing' | 'player-won' | 'game-over'
 
 type LevelConfig = {
   totalColumns: number,
@@ -10,7 +10,7 @@ type LevelConfig = {
 }
 
 type Level = {
-  description: string,
+  label: string
   config: LevelConfig
 }
 
@@ -18,7 +18,7 @@ type Levels = Record<'beginner' | 'intermediate' | 'expert', Level>
 
 const levels: Levels = {
   beginner: {
-    description: "Bem facil, feito pra bebes",
+    label: 'Beginner',
     config: {
       totalColumns: 8,
       totalRows: 8,
@@ -26,7 +26,7 @@ const levels: Levels = {
     }
   },
   intermediate: {
-    description: "Bem facil, feito pra bebes",
+    label: 'Intermediate',
     config: {
       totalColumns: 16,
       totalRows: 16,
@@ -34,7 +34,7 @@ const levels: Levels = {
     }
   },
   expert: {
-    description: "Bem facil, feito pra bebes",
+    label: 'Expert',
     config: {
       totalColumns: 32,
       totalRows: 16,
@@ -46,6 +46,12 @@ const levels: Levels = {
 function App() {
   const [gameState, setGameState] = useState<GameState>('waiting')
   const [gameLevel, setGameLevel] = useState<keyof Levels>('beginner')
+
+  useEffect(() => {
+    if (gameState === 'restarting') {
+      setGameState('waiting')
+    }
+  }, [gameState])
 
   useEffect(() => {
     setGameState('waiting')
@@ -73,20 +79,21 @@ function App() {
         {
           Object.keys(levels).map((level) => (
             <button
-              disabled={gameState === 'playing'}
+              disabled={gameState === 'playing' || gameLevel === level}
               key={level}
               onClick={() => handleLevelSelect(level as keyof Levels)}
             >
-              {level}
+              {levels[level as keyof Levels].label}
             </button>
           ))
         }
-      </ div>
+      </div>
 
-      {gameState}
+      {gameState}...
 
       {
-        gameLevel && (
+        gameLevel &&
+        gameState !== 'restarting' && (
           <Board
             gameState={gameState}
             onGameOver={handleOnGameOver}
@@ -96,6 +103,11 @@ function App() {
           />
         )
       }
+      <div>
+        <button onClick={() => setGameState('restarting')}>
+          Restart
+        </button>
+      </div>
     </>
   );
 }
