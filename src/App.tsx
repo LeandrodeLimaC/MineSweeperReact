@@ -77,13 +77,13 @@ function App() {
     <>
       <div>
         {
-          Object.keys(levels).map((level) => (
+          (Object.keys(levels) as Array<keyof Levels>).map((level) => (
             <button
               disabled={gameState === 'playing' || gameLevel === level}
               key={level}
-              onClick={() => handleLevelSelect(level as keyof Levels)}
+              onClick={() => handleLevelSelect(level)}
             >
-              {levels[level as keyof Levels].label}
+              {levels[level].label}
             </button>
           ))
         }

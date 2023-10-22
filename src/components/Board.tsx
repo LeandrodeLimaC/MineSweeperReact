@@ -217,14 +217,22 @@ function Board({
   }
 
   return (
-    <div>
+    <div
+      style={{
+        transformStyle: "preserve-3d",
+        perspectiveOrigin: "bottom",
+        perspective: "1500px",
+      }}
+    >
       {flagsAvailable}
       <div
         style={{
           display: "grid",
           gridTemplateColumns: `repeat(${totalColumns}, 40px)`,
           gridTemplateRows: `repeat(${totalRows}, 40px)`,
-          gap: "2px"
+          backgroundColor: "#808080",
+          border: ".5px solid #808080",
+          width: "fit-content",
         }}
       >
         {board.map((row) =>
@@ -236,16 +244,18 @@ function Board({
               coordinates,
               isFlagged
             }) => (
-              <Tile
-                coordinates={coordinates}
-                key={`${coordinates.x}${coordinates.y}`}
-                onLeftClick={(coordinates) => withMoveCheck(coordinates, handleTileLeftClick)}
-                onRightClick={(coordinates) => withMoveCheck(coordinates, handleTileRightClick)}
-                wasRevealed={wasRevealed}
-                hasMine={hasMine}
-                isFlagged={isFlagged}
-                minesAround={minesAround}
-              />
+              <div style={{ position: "relative" }}>
+                <Tile
+                  coordinates={coordinates}
+                  key={`${coordinates.x}${coordinates.y}`}
+                  onLeftClick={(coordinates) => withMoveCheck(coordinates, handleTileLeftClick)}
+                  onRightClick={(coordinates) => withMoveCheck(coordinates, handleTileRightClick)}
+                  wasRevealed={wasRevealed}
+                  hasMine={hasMine}
+                  isFlagged={isFlagged}
+                  minesAround={minesAround}
+                />
+              </div>
             )
           )
         )}
