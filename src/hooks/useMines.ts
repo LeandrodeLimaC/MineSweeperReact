@@ -1,6 +1,6 @@
 import React from "react";
 
-import { randomIntFromInterval } from "src/utils/randomIntFromInterval";
+import { randomIntFromInterval } from "../utils/randomIntFromInterval";
 
 type UseMinesProps = {
   board: Board;
@@ -20,7 +20,7 @@ function useMines({ board, minesCount }: UseMinesProps) {
         });
       },
       handleSetMines: (coordinatesToIgnore: Coordinates2D) => {
-        let options = board
+        const options = board
           .flat()
           .filter(
             ({ coordinates }) =>
@@ -33,7 +33,7 @@ function useMines({ board, minesCount }: UseMinesProps) {
 
         for (let i = 0; i < minesCount; i++) {
           const randomIndex = randomIntFromInterval(0, options.length - 1);
-          let [pickedOption] = options.splice(randomIndex, 1);
+          const [pickedOption] = options.splice(randomIndex, 1);
 
           boardCopy[pickedOption.coordinates.x][pickedOption.coordinates.y] = {
             ...pickedOption,

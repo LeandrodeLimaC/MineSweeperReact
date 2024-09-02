@@ -1,32 +1,30 @@
-# React with Bun runtime
+# React + TypeScript + Vite
 
-This is a React project bootstrapped with [bun](https://bun.sh/).
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-## Getting Started
+Currently, two official plugins are available:
 
-### Cloning the repo
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-```sh
-bun create react ./react-bun-app
+## Expanding the ESLint configuration
+
+If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+
+- Configure the top-level `parserOptions` property like this:
+
+```js
+export default {
+  // other rules...
+  parserOptions: {
+    ecmaVersion: 'latest',
+    sourceType: 'module',
+    project: ['./tsconfig.json', './tsconfig.node.json'],
+    tsconfigRootDir: __dirname,
+  },
+}
 ```
 
-### Development
-
-First, run the development server.
-
-```
-bun dev
-```
-
-Open http://localhost:3000 with your browser to see the result.
-
-You can start editing the page by modifying src/App.jsx. The page auto-updates as you edit the file.
-
-## Learn More
-
-To learn more about React.js, take a look at the following resources:
-
-- [React.js Documentation](https://reactjs.org/docs/getting-started.html) - learn about React.js features.
-- [Learn React.js](https://reactjs.org/tutorial/tutorial.html) - an interactive React.js tutorial.
-
-You can check out the [React.js GitHub repository](https://github.com/facebook/react) - your feedback and contributions are welcome!
+- Replace `plugin:@typescript-eslint/recommended` to `plugin:@typescript-eslint/recommended-type-checked` or `plugin:@typescript-eslint/strict-type-checked`
+- Optionally add `plugin:@typescript-eslint/stylistic-type-checked`
+- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and add `plugin:react/recommended` & `plugin:react/jsx-runtime` to the `extends` list

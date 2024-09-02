@@ -1,13 +1,13 @@
-import React, { useEffect } from "react"
+import { useEffect } from "react"
 
 import { GameState } from "../App"
 import { Tile } from "./Tile"
 
-import { useBoard } from "src/hooks/useBoard"
-import { useMines } from "src/hooks/useMines"
-import { useFlags } from "src/hooks/useFlags"
+import { useBoard } from "../hooks/useBoard"
+import { useMines } from "../hooks/useMines"
+import { useFlags } from "../hooks/useFlags"
 
-import { useManagePlayerWon } from "src/hooks/useManagePlayerWon"
+import { useManagePlayerWon } from "../hooks/useManagePlayerWon"
 
 type BoardProps = {
   totalRows: number,
@@ -46,7 +46,8 @@ function Board({
       handleDetonateMines(revealTile)
       revealIncorrectFlags()
     }
-  }, [gameState])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState, handleDetonateMines])
 
   const onSetMines = (coordinatesToIgnore: Coordinates2D) => {
     const boardWithMines = handleSetMines(coordinatesToIgnore)
@@ -59,10 +60,10 @@ function Board({
     const neighbors = []
 
     for (let offSetX = -1; offSetX <= 1; offSetX++) {
-      let currentX = x + offSetX
+      const currentX = x + offSetX
 
       for (let offSetY = -1; offSetY <= 1; offSetY++) {
-        let currentY = y + offSetY
+        const currentY = y + offSetY
 
         const isCurrentTile = currentX === x && currentY === y
 
@@ -91,7 +92,7 @@ function Board({
   const floodFill = (
     { x, y }: Coordinates2D
   ) => {
-    let currentTile = board[x][y]
+    const currentTile = board[x][y]
 
     if (currentTile.isFlagged)
       return
